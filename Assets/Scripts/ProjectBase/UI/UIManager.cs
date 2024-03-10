@@ -24,6 +24,24 @@ public class ShowCallBack<T>: IShowCallBack where T : BasePanel
         callback?.Invoke(panel as T);
     }
 }
+
+public class WorldUIData
+{
+    public Transform parent;
+    public GameObject worldUI;
+
+    public WorldUIData(Transform parent, GameObject worldUI)
+    {
+        this.parent = parent;
+        this.worldUI = worldUI;
+    }
+
+    public void Updata()
+    {
+        if(parent == null) { UIManager.Instance.HideNullWorldUI(); return; }
+        worldUI.transform.position = new Vector3(parent.position.x, parent.position.y, worldUI.transform.position.z);
+    }
+}
 /// <summary>
 /// UI管理器
 /// 1.管理所有显示的面板
@@ -41,11 +59,16 @@ public class UIManager : BaseManager<UIManager>
     private BasePanel stackActivePanel;
     private Stack<BasePanel> stackPanel = new Stack<BasePanel>();
     private Queue<(BasePanel, IShowCallBack)> queuePanel = new Queue<(BasePanel, IShowCallBack)>();
+    //世界跟随ui
+    public Dictionary<Transform, WorldUIData> worldUIDic = new Dictionary<Transform, WorldUIData>();
+    public Action worldUIUpdataAction;
+    private bool hideNullUI;
     //面板资源文件
     public List<PanelData> panelDatas = new List<PanelData>();
     //uiRoot
     private Transform uiRoot;
     private Camera uiCamera;
+    private Transform worldPanel;
     //ui更新事件
     private UnityAction panleUpdata;
 
@@ -58,9 +81,14 @@ public class UIManager : BaseManager<UIManager>
         //获取面板资源文件
         panelDatas = ResMgr.Instance.Load<PanelList_SO>("PanelList_SO").panelDatas;
         //UIRoot 让其过场景的时候 不被移除
+        GameObject.Find("UIRoot")?.SetActive(false);
+
         GameObject obj = ResMgr.Instance.Load<GameObject>("UIRoot");
         uiRoot = obj.transform;
         uiCamera = obj.GetComponentInChildren<Camera>();
+        worldPanel = obj.transform.Find("WorldPanel");
+        //使用upr时，取消注释，uicamer就能生效
+        //Camera.main.GetUniversalAdditionalCameraData().cameraStack.Add(uiCamera);
         GameObject.DontDestroyOnLoad(obj);
         //开始面板更新
         MonoMgr.Instance.AddUpdateListener(Updata);
@@ -69,7 +97,13 @@ public class UIManager : BaseManager<UIManager>
     private void Updata()
     {
         panleUpdata?.Invoke();
-        if (Input.GetKeyDown(KeyCode.Escape) && !isOnHide) 
+        AutoHide();
+        WorldUIUpdata();
+    }
+
+    private void AutoHide()
+    {
+        if (Input.GetKeyDown(KeyCode.Escape) && !isOnHide)
         {
             if (queueActivePanel != null)
             {
@@ -78,13 +112,14 @@ public class UIManager : BaseManager<UIManager>
                     HidePanel(queueActivePanel, queueActivePanel.OnOutHide);
                 }
             }
-            else if (stackActivePanel != null) 
+            else if (stackActivePanel != null)
             {
-                if(stackPanel.Count != 0 && stackActivePanel.IsOutHide())
+                if (stackPanel.Count != 0 && stackActivePanel.IsOutHide())
                 {
                     HidePanel(stackActivePanel, stackActivePanel.OnOutHide);
                 }
-            }else if (visiblePanel.Count > 1)
+            }
+            else if (visiblePanel.Count > 1)
             {
                 BasePanel panel = visiblePanel[visiblePanel.Count - 1];
                 if (panel.IsOutHide())
@@ -94,6 +129,67 @@ public class UIManager : BaseManager<UIManager>
             }
         }
     }
+
+    private void WorldUIUpdata()
+    {
+        if (hideNullUI)
+        {
+            hideNullUI = false;
+            while (worldUIDic.TryClearNullKey(out WorldUIData wd))
+            {
+                worldUIUpdataAction -= wd.Updata;
+                GameObject.Destroy(wd.worldUI);
+            }
+        }
+        worldUIUpdataAction?.Invoke();
+    }
+
+    /// <summary>
+    /// 显示世界跟随ui
+    /// </summary>
+    /// <param name="canvas"></param>
+    public void ShowWorldUI(Transform canvas)
+    {
+        if (worldUIDic.ContainsKey(canvas)) return;
+        int childCount = canvas.childCount;
+        if (childCount == 0) return;
+        GameObject gb = new GameObject();
+        List<Transform> children = new List<Transform>();
+        for (int i = 0; i < childCount; i++)
+        {
+            children.Add(canvas.GetChild(i));
+        }
+        foreach(Transform tf in children)
+        {
+            tf.SetParent(gb.transform, false);
+        }
+        gb.transform.SetParent(worldPanel, false);
+        WorldUIData wd = new WorldUIData(canvas, gb);
+        worldUIUpdataAction += wd.Updata;
+        canvas.gameObject.SetActive(false);
+    }
+    /// <summary>
+    /// 隐藏世界跟随ui
+    /// </summary>
+    /// <param name="canvas"></param>
+    public void HideWorldUI(Transform canvas)
+    {
+        if (worldUIDic.TryGetValue(canvas,out WorldUIData wd))
+        {
+            worldUIUpdataAction -= wd.Updata;
+            for (int i = 0;i < wd.worldUI.transform.childCount; i++)
+            {
+                wd.worldUI.transform.GetChild(i).SetParent(canvas, false);
+            }
+            worldUIDic.Remove(canvas);
+        }
+    }
+
+    public void HideNullWorldUI()
+    {
+        hideNullUI = true;
+    }
+
     /// <summary>
     /// 预加载面板
     /// </summary>
@@ -383,6 +479,7 @@ public class UIManager : BaseManager<UIManager>
         //得到预设体身上的面板脚本
         PanelUI panelUI = obj.GetComponent<PanelUI>();
         obj.GetComponent<Canvas>().worldCamera = uiCamera;
+        panel.camera = uiCamera;
         panel.panelUI = panelUI;
         panel.Init(panelUI);
         panel.gameObject = obj;

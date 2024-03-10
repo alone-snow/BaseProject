@@ -25,9 +25,9 @@ public class PanelUIEditor : UnityEditor.Editor
             {
                 m_UIComonentName = new string[UIComponentType.Count + 1];
                 m_UIComonentName[0] = "×Ô¶¨Òå";
-                for(int i = 1; i < UIComponentType.Count; i++)
+                for(int i = 1; i < m_UIComonentName.Length; i++)
                 {
-                    m_UIComonentName[i + 1] = UIComponentType[i].Name;
+                    m_UIComonentName[i] = UIComponentType[i - 1].Name;
                 }
             }
             return m_UIComonentName; 

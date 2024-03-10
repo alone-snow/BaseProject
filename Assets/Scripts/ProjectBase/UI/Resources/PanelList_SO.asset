@@ -31,3 +31,5 @@ MonoBehaviour:
     gameObject: {fileID: 7272584867240923802, guid: ec80ec545e11f8b4e8a94541db54a73d, type: 3}
   - name: ClickGamePanel
     gameObject: {fileID: 6685396580306870907, guid: 7112b3328d41aee4dae420adfe5f4359, type: 3}
+  - name: ScanGamePanel
+    gameObject: {fileID: 2359799490810756080, guid: 03b3b0b0ffa42d241a987d8a8a4891d4, type: 3}

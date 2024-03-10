@@ -15,7 +15,7 @@ public class CurrencyButton : MonoBehaviour
     public UnityAction<int> OnClik;
     protected virtual void Awake()
     {
-        btn.onClick.AddListener(() =>
+        btn?.onClick.AddListener(() =>
         {
             m_OnClikButton?.Invoke(index);
             OnClik?.Invoke(index);

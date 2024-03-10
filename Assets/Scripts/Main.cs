@@ -17,7 +17,7 @@ public class Main : MonoBehaviour
     {
         //NetMgr.Instance.Init();
 
-        //UIManager.Instance.StackPanel<StartPanel>();
+        UIManager.Instance.ShowPanel<LoginPanel>();
 
         //UIManager.Instance.PreparePanel<TripleEliminationPanel>();
         //TEManager.Instance.Init(5, 6, 10, (o) =>

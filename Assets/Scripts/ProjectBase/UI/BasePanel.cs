@@ -18,7 +18,9 @@ public class BasePanel
 {
 
     public CanvasGroup CanvasGroup;
+    public Camera camera;
 
+    public Transform UIRoot => gameObject.transform.parent;
     public GameObject gameObject;
     public PanelUI panelUI;
 
