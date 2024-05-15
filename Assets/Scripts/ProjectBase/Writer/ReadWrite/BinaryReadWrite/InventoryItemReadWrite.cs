@@ -10,12 +10,14 @@ namespace BinaryReadWrite
 		{
 			writer.Write(value.itemID);
 			writer.Write(value.itemAmount);
+
 		}
 		public static InventoryItem ReadInventoryItem(this Reader reader)
 		{
 			InventoryItem value = new InventoryItem();
 			value.itemID = reader.ReadInt();
 			value.itemAmount = reader.ReadInt();
+
 			return value;
 		}
 	}

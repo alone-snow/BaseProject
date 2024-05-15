@@ -1,12 +1,10 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using Unity.VisualScripting;
-using UnityEditor.Search;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
-using UnityEngine.UI;
+//using UnityEngine.Rendering.Universal;
 public interface IShowCallBack 
 {
     public void Invoke(BasePanel panel);
@@ -29,17 +27,41 @@ public class WorldUIData
 {
     public Transform parent;
     public GameObject worldUI;
-
+    public int type;
+    public Camera camera;
+    public float scale;
+    public float distance;
     public WorldUIData(Transform parent, GameObject worldUI)
     {
         this.parent = parent;
         this.worldUI = worldUI;
+        camera = Camera.main;
+        distance = 6;
     }
 
     public void Updata()
     {
-        if(parent == null) { UIManager.Instance.HideNullWorldUI(); return; }
+        if (parent == null) { UIManager.Instance.HideNullWorldUI(); return; }
+        if (type == 0) return;
+        if ((type & 1) != 0) Move();
+        if ((type & 2) != 0) Rotation();
+        if ((type & 4) != 0) Scale();
+    }
+
+    public void Move()
+    {
+        if (parent == null) { UIManager.Instance.HideNullWorldUI(); return; }
         worldUI.transform.position = new Vector3(parent.position.x, parent.position.y, worldUI.transform.position.z);
+    }
+
+    public void Rotation()
+    {
+        worldUI.transform.rotation = camera.transform.rotation;
+    }
+
+    public void Scale()
+    {
+        worldUI.transform.localScale = scale * Mathf.Abs(Vector3.Dot(camera.transform.position - worldUI.transform.position, camera.transform.forward)) / distance * Vector3.one;
     }
 }
 /// <summary>
@@ -70,7 +92,7 @@ public class UIManager : BaseManager<UIManager>
     private Camera uiCamera;
     private Transform worldPanel;
     //ui更新事件
-    private UnityAction panleUpdata;
+    private UnityAction panelUpdata;
 
     private int hideCount = 0;
     public bool isOnHide => hideCount != 0;
@@ -87,8 +109,7 @@ public class UIManager : BaseManager<UIManager>
         uiRoot = obj.transform;
         uiCamera = obj.GetComponentInChildren<Camera>();
         worldPanel = obj.transform.Find("WorldPanel");
-        //使用upr时，取消注释，uicamer就能生效
-        //Camera.main.GetUniversalAdditionalCameraData().cameraStack.Add(uiCamera);
+        //Camera.main.GetUniversalAdditionalCameraData().cameraStack.Add(uiCamera);//upr请调用
         GameObject.DontDestroyOnLoad(obj);
         //开始面板更新
         MonoMgr.Instance.AddUpdateListener(Updata);
@@ -96,7 +117,7 @@ public class UIManager : BaseManager<UIManager>
     //面板更新
     private void Updata()
     {
-        panleUpdata?.Invoke();
+        panelUpdata?.Invoke();
         AutoHide();
         WorldUIUpdata();
     }
@@ -143,29 +164,34 @@ public class UIManager : BaseManager<UIManager>
         }
         worldUIUpdataAction?.Invoke();
     }
-
     /// <summary>
-    /// 显示世界跟随ui
+    /// 预加载世界ui
     /// </summary>
     /// <param name="canvas"></param>
-    public void ShowWorldUI(Transform canvas)
+    /// <param name="type"></param>
+    public void PrepareWorldUI(Transform canvas, int type = 0)
     {
-        if (worldUIDic.ContainsKey(canvas)) return;
-        int childCount = canvas.childCount;
-        if (childCount == 0) return;
-        GameObject gb = new GameObject();
-        List<Transform> children = new List<Transform>();
-        for (int i = 0; i < childCount; i++)
-        {
-            children.Add(canvas.GetChild(i));
-        }
-        foreach(Transform tf in children)
-        {
-            tf.SetParent(gb.transform, false);
-        }
-        gb.transform.SetParent(worldPanel, false);
-        WorldUIData wd = new WorldUIData(canvas, gb);
+        WorldUIData wd = GetWorldUI(canvas);
+        if (wd == null) return;
+        wd.type = type;
+        wd.worldUI.SetActive(false);
+        canvas.gameObject.SetActive(false);
+    }
+
+    /// <summary>
+    /// 显示世界ui
+    /// <para>type : ui类型，1位置跟随、2面朝摄像机、4屏幕固定大小</para>
+    /// </summary>
+    /// <param name="canvas"></param>
+    /// <param name="type"></param>
+    public void ShowWorldUI(Transform canvas,int type = -1)
+    {
+        WorldUIData wd = GetWorldUI(canvas);
+        if (wd == null) return;
+        if (type != -1)
+            wd.type = type;
         worldUIUpdataAction += wd.Updata;
+        wd.worldUI.SetActive(true);
         canvas.gameObject.SetActive(false);
     }
     /// <summary>
@@ -177,17 +203,41 @@ public class UIManager : BaseManager<UIManager>
         if (worldUIDic.TryGetValue(canvas,out WorldUIData wd))
         {
             worldUIUpdataAction -= wd.Updata;
-            for (int i = 0;i < wd.worldUI.transform.childCount; i++)
-            {
-                wd.worldUI.transform.GetChild(i).SetParent(canvas, false);
-            }
-            worldUIDic.Remove(canvas);
+            if (wd.worldUI != null)
+                wd.worldUI.SetActive(false);
         }
     }
 
     public void HideNullWorldUI()
     {
         hideNullUI = true;
+    }
+
+    private WorldUIData GetWorldUI(Transform canvas)
+    {
+        if (!worldUIDic.TryGetValue(canvas, out WorldUIData wd))
+        {
+            int childCount = canvas.childCount;
+            if (childCount == 0) return null;
+            GameObject gb = new GameObject();
+            List<Transform> children = new List<Transform>();
+            for (int i = 0; i < childCount; i++)
+            {
+                children.Add(canvas.GetChild(i));
+            }
+            foreach (Transform tf in children)
+            {
+                tf.SetParent(gb.transform, false);
+            }
+            gb.transform.SetParent(worldPanel, false);
+            gb.transform.position = canvas.transform.position;
+            gb.transform.rotation = canvas.transform.rotation;
+            gb.transform.localScale = canvas.transform.localScale;
+            wd = new WorldUIData(canvas, gb);
+            wd.scale = canvas.transform.localScale.x;
+            worldUIDic.Add(canvas, wd);
+        }
+        return wd;
     }
 
     /// <summary>
@@ -220,16 +270,23 @@ public class UIManager : BaseManager<UIManager>
         stackActivePanel = panel;
         if (aPanel != null)
         {
-            HidePanel(aPanel);
             stackPanel.Push(aPanel);
+            HidePanel(aPanel, () =>
+            {
+                ShowPanel(panel, callBack);
+            });
         }
-        ShowPanel(panel, callBack);
+        else
+        {
+            ShowPanel(panel, callBack);
+        }
     }
     /// <summary>
     /// 弹出堆栈面板
     /// </summary>
     public void PopPanel()
     {
+        if (stackPanel.Count == 0) return;
         stackActivePanel = stackPanel.Pop();
         ShowPanel(stackActivePanel);
     }
@@ -261,7 +318,7 @@ public class UIManager : BaseManager<UIManager>
     /// </summary>
     public void DequeuePanel()
     {
-        if (queueActivePanel != null) return;
+        if (queuePanel.Count == 0 || queueActivePanel != null) return;
         IShowCallBack callback;
         (queueActivePanel, callback) = queuePanel.Dequeue();
         ShowPanel(queueActivePanel, callback);
@@ -436,12 +493,17 @@ public class UIManager : BaseManager<UIManager>
 
     private void M_ShowPanel(BasePanel panel)
     {
+        if (panel.visible == true) 
+        {
+            panel.ShowMe();
+            return;
+        }
         panel.visible = true;
         panel.CanvasGroup.alpha = 1.0f;
         panel.CanvasGroup.blocksRaycasts = true;
         panel.CanvasGroup.interactable = true;
         visiblePanel.Add(panel);
-        panleUpdata += panel.Update;
+        panelUpdata += panel.Update;
         panel.OnEnable();
         if (!panel.ifStart)
         {
@@ -494,6 +556,8 @@ public class UIManager : BaseManager<UIManager>
         obj.transform.localScale = Vector3.one;
         (obj.transform as RectTransform).offsetMax = Vector2.zero;
         (obj.transform as RectTransform).offsetMin = Vector2.zero;
+        (obj.transform as RectTransform).anchorMax = Vector2.one;
+        (obj.transform as RectTransform).anchorMin = Vector2.zero;
         obj.name = panelName;
         panel.Awake();
         return panel;
@@ -515,21 +579,27 @@ public class UIManager : BaseManager<UIManager>
         CutFaterPanel(panelChildren);
         panelChildren.parentPanel = panelFather;
         panelFather.childrenPanels.Add(panelChildren.GetType().Name, panelChildren);
-        panelChildren.gameObject.transform.SetParent(panelFather.gameObject.transform);
+        panelChildren.gameObject.transform.SetParent(panelFather.gameObject.transform, false);
+        panelChildren.gameObject.transform.localScale = Vector3.one;
+        (panelChildren.gameObject.transform as RectTransform).offsetMax = Vector2.zero;
+        (panelChildren.gameObject.transform as RectTransform).offsetMin = Vector2.zero;
+        (panelChildren.gameObject.transform as RectTransform).anchorMax = Vector2.one;
+        (panelChildren.gameObject.transform as RectTransform).anchorMin = Vector2.zero;
     }
 
 
     private void M_HidePanel(BasePanel panel,UnityAction callBack)
     {
         hideCount++;
-        foreach(var child in panel.childrenPanels)
+        var panels = panel.childrenPanels.Values.ToArray();
+        foreach (var child in panels)
         {
-            M_HidePanel(child.Value, null);
+            M_HidePanel(child, null);
         }
         CutFaterPanel(panel);
         visiblePanel.Remove(panel);
         panel.visible = false;
-        panleUpdata -= panel.Update;
+        panelUpdata -= panel.Update;
         panel.OnDisable();
         panel.HideMe(() =>
         {

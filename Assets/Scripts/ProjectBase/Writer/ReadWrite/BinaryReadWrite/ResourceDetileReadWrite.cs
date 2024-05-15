@@ -10,12 +10,14 @@ namespace BinaryReadWrite
 		{
 			writer.Write((int)value.resourceType);
 			writer.Write(value.amount);
+
 		}
 		public static ResourceDetile ReadResourceDetile(this Reader reader)
 		{
 			ResourceDetile value = new ResourceDetile();
-			value.resourceType = (E_ResourceType)reader.ReadInt();
+			value.resourceType= (E_ResourceType)reader.ReadInt();
 			value.amount = reader.ReadFloat();
+
 			return value;
 		}
 	}

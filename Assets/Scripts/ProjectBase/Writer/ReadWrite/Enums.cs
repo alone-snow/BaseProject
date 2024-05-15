@@ -1,7 +1,7 @@
 public enum ItemType 
 {
-    seed = 1,Commodity = 2,Furniture = 4,
-    HoeTool = 8,ChopTool = 16,BreakTool = 32,ReapTool = 64,WaterTool = 128,CollectTool = 256,
+    material = 1,bullet = 2, prop = 4,
+    ship = 8,ChopTool = 16,BreakTool = 32,ReapTool = 64,WaterTool = 128,CollectTool = 256,
     weapon = 512, equip = 1024, jewelry = 2048,
     ReapableScenery = 4096, collection = 8192,
 
@@ -61,7 +61,7 @@ public enum EntityType
 
 public enum E_EventTouchType
 {
-    trade, burst
+    Mine, Fight, Emergencies
 }
 public enum E_ResourceType
 {

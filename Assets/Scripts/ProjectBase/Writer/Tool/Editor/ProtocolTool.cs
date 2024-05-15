@@ -1,5 +1,7 @@
+using BinaryReadWrite;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Xml;
 using UnityEditor;
 using UnityEngine;
@@ -11,7 +13,7 @@ public class ProtocolTool
     private static string SAVE_PATH = Application.dataPath + "/Scripts/ProjectBase/Writer/ReadWrite/";
 
     private static GenerateCSharp generateCSharp = new GenerateCSharp();
-    [MenuItem("Tools/GenerateDataReadWrite")]
+    [MenuItem("Tools/DataReadWrite/通过xml生成")]
     private static void GenerateCSharp()
     {
         //生成对应的数据类读写脚本
@@ -30,5 +32,18 @@ public class ProtocolTool
         xml.Load(XML_INFO_PATH);
         XmlNode root = xml.SelectSingleNode("messages");
         return root.SelectNodes(nodeName);
+    }
+    [MenuItem("Tools/DataReadWrite/通过特性生成")]
+    private static void AutoGenerateCSharp()
+    {
+        Stopwatch stopwatch = new Stopwatch();
+        stopwatch.Start();
+        foreach(var value in WriterManage.assemblyList)
+        {
+            generateCSharp.GenerateData(value.assembly, value.savePath);
+        }
+        stopwatch.Stop();
+        UnityEngine.Debug.Log("Thread execution time: " + stopwatch.ElapsedMilliseconds + " ms");
+        AssetDatabase.Refresh();
     }
 }

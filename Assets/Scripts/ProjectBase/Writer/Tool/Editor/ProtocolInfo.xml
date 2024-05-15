@@ -10,83 +10,9 @@
 		<field type="array" data="byte" name="buffer"/>
 		<field type="int" name="Position"/>
 	</data>
-	<data name="PlayerData" namespace="BinaryReadWrite" type="Outside">
-		<field type="long" name="id"/>
-		<field type="string" name="name"/>
-		<field type="list" T="float" name="numValue"/>
-		<field type="float" name="searchStrength"/>
-		<field type="float" name="maxSearchAmount"/>
-		<field type="float" name="searchCost"/>
-		<field type="float" name="jumpCost"/>
-		<field type="float" name="transitionCost"/>
-		<field type="list" T="EventData" name="eventDatas"/>
-		<field type="dic" Tkey="string" Tvalue="EventPool" name="pools"/>
-		<field type="list" T="InventoryItem" name="box"/>
-		<field type="list" T="EventData" name="eventDataList"/>
-		<field type="EventData" name="activeEvent"/>
-		<field type="bool" name="ifHaveActiveEvent"/>
-		<field type="dic" Tkey="string" Tvalue="float" name="state"/>
-	</data>
 	<data name="AccountData" namespace="BinaryReadWrite" type="Inside">
 		<field type="string" name="account"/>
 		<field type="string" name="password"/>
 		<field type="PlayerData" name="playerData"/>
-	</data>
-	<data name="EventMod" namespace="BinaryReadWrite" type="Outside">
-		<field type="int" name="modId"/>
-		<field type="string" name="name"/>
-		<field type="list" T="EventData" name="eventDatas"/>
-		<field type="list" T="EventPool" name="eventPools"/>
-	</data>
-	<data name="EventData" namespace="BinaryReadWrite" type="Outside">
-		<field type="string" name="id"/>
-		<field type="string" name="name"/>
-		<field type="string" name="content"/>
-		<field type="enum" data="E_EventTouchType" name="touchType"/>
-		<field type="enum" data="E_EventQuality" name="quality"/>
-		<field type="list" T="ResourceDetile" name="resources"/>
-		<field type="list" T="InventoryItem" name="itemDetails"/>
-		<field type="list" T="ChoiceDetile" name="choiceDetile"/>
-		<field type="list" T="string" name="unlockEvent"/>
-	</data>
-	<data name="EventPool" namespace="BinaryReadWrite" type="Outside">
-		<field type="string" name="poolName"/>
-		<field type="list" T="EventPoolData" name="eventPoolData"/>
-	</data>
-	<data name="EventPoolData" namespace="BinaryReadWrite" type="Outside">
-		<field type="string" name="eventId"/>
-		<field type="int" name="weight"/>
-		<field type="int" name="weightIndex"/>
-	</data>
-	<data name="ResourceDetile" namespace="BinaryReadWrite" type="Outside">
-		<field type="enum" data="E_ResourceType" name="resourceType"/>
-		<field type="float" name="amount"/>
-	</data>
-	<data name="InventoryItem" namespace="BinaryReadWrite" type="Outside">
-		<field type="int" name="itemID"/>
-		<field type="int" name="itemAmount"/>
-	</data>
-	<data name="ChoiceDetile" namespace="BinaryReadWrite" type="Outside">
-		<field type="string" name="name"/>
-		<field type="string" name="eventId"/>
-		<field type="string" name="trigerContent"/>
-		<field type="string" name="LimitContent"/>
-		<field type="array" data="float" name="floats"/>
-		<field type="list" T="ResourceDetile" name="resources"/>
-		<field type="list" T="InventoryItem" name="itemDetails"/>
-	</data>
-	<data name="UserData" namespace="BinaryReadWrite" type="Outside">
-		<field type="string" name="account"/>
-		<field type="string" name="password"/>
-		<field type="string" name="language"/>
-		<field type="list" T="ModState" name="mods"/>
-		<field type="float" name="volume"/>
-		<field type="float" name="SoundValue"/>
-	</data>
-	<data name="ModState" namespace="BinaryReadWrite" type="Outside">
-		<field type="string" name="name"/>
-		<field type="string" name="description"/>
-		<field type="string" name="modID"/>
-		<field type="bool" name="isActive"/>
 	</data>
 </messages>

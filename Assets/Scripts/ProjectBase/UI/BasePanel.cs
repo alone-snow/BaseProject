@@ -30,7 +30,7 @@ public class BasePanel
     [HideInInspector] public BasePanel parentPanel;
     [HideInInspector] public Dictionary<string, BasePanel> childrenPanels = new Dictionary<string, BasePanel>();
 
-    private UnityAction hidecallback; //委托or事件 的装载
+    protected UnityAction hidecallback; //委托or事件 的装载
 
 
     public virtual void Awake () {

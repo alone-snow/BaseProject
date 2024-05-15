@@ -11,11 +11,10 @@ namespace BinaryReadWrite
 			writer.Write(value.account);
 			writer.Write(value.password);
 			writer.Write(value.language);
-			writer.Write((short)value.mods.Count);
-			for (int i = 0; i < value.mods.Count; ++i)
-				writer.WriteModState(value.mods[i]);
+			writer.Write(value.playerId);
 			writer.Write(value.volume);
 			writer.Write(value.SoundValue);
+
 		}
 		public static UserData ReadUserData(this Reader reader)
 		{
@@ -23,12 +22,10 @@ namespace BinaryReadWrite
 			value.account = reader.ReadString();
 			value.password = reader.ReadString();
 			value.language = reader.ReadString();
-			value.mods = new List<ModState>();
-			short modsCount = reader.ReadShort();
-			for (int i = 0; i < modsCount; ++i)
-				value.mods.Add(reader.ReadModState());
+			value.playerId = reader.ReadLong();
 			value.volume = reader.ReadFloat();
 			value.SoundValue = reader.ReadFloat();
+
 			return value;
 		}
 	}

@@ -25,6 +25,7 @@ public class PanelUI : MonoBehaviour, ISerializationCallbackReceiver
     public string assetName;
     public string bundleName;
     public string componentName;
+    //public UILayer uiLayer = UILayer.BaseRoot;
     public List<PanelUIData> list = new List<PanelUIData>();
     private readonly Dictionary<string, Object> _referenceDic = new Dictionary<string, Object>();
 

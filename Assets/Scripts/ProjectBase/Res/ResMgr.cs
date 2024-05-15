@@ -89,6 +89,22 @@ public class ResMgr : BaseManager<ResMgr>
         return File.ReadAllLines(path);
     }
     /// <summary>
+    /// 读取所有字节
+    /// </summary>
+    /// <param name="name"></param>
+    /// <returns></returns>
+    public byte[] LoadAllBytes(string name)
+    {
+        string path = Application.streamingAssetsPath + "/" + name;
+        if (!File.Exists(path)) path = Application.persistentDataPath + "/" + name;
+        if (!File.Exists(path))
+        {
+            Debug.Log("不存在文件：" + name);
+            return null;
+        }
+        return File.ReadAllBytes(path);
+    }
+    /// <summary>
     /// 保存json
     /// </summary>
     /// <param name="data"></param>
@@ -102,9 +118,17 @@ public class ResMgr : BaseManager<ResMgr>
     /// </summary>
     /// <param name="data"></param>
     /// <param name="name"></param>
-    public void SaveWithBinary(object data , string name)
+    public void SaveWithBinary(object data , string name, bool ifPersistent = true)
     {
-        string path = Path.Combine(Application.streamingAssetsPath, name);
+        string path = null;
+        if (ifPersistent)
+        {
+            path = Path.Combine(Application.persistentDataPath, name);
+        }
+        else
+        {
+            path = Path.Combine(Application.streamingAssetsPath, name);
+        }
         string directoryName = Path.GetDirectoryName(path);
         if (!Directory.Exists(directoryName)) Directory.CreateDirectory(directoryName);
         using (FileStream fileStream = File.Create(Application.streamingAssetsPath + "/" + name))
@@ -112,13 +136,21 @@ public class ResMgr : BaseManager<ResMgr>
             binaryFormatter.Serialize(fileStream,data);
         }
     }
-    public void SaveWithWriter<T>(T data, string name)
+    public void SaveWithWriter<T>(T data, string name,bool ifPersistent = true)
     {
-        string path = Path.Combine(Application.streamingAssetsPath, name);
+        string path = null;
+        if (ifPersistent)
+        {
+            path = Path.Combine(Application.persistentDataPath, name);
+        }
+        else
+        {
+            path = Path.Combine(Application.streamingAssetsPath, name);
+        }
         string directoryName = Path.GetDirectoryName(path);
         if (!Directory.Exists(directoryName)) Directory.CreateDirectory(directoryName);
         byte[] datas = WriterManage.Instance.Write(data);
-        File.WriteAllBytes(Application.streamingAssetsPath + "/" + name, datas);
+        File.WriteAllBytes(path, datas);
     }
     //异步加载资源
     public void LoadAsync<T>(string name, UnityAction<T> callback) where T:Object

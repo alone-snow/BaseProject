@@ -5,79 +5,84 @@ using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-public class FloatWindow : UIBehaviour, IPointerEnterHandler, IPointerExitHandler
+public interface IFloatWindow 
 {
-    public GameObject window;
-    [HideInInspector] public UnityEvent<FloatWindow> onPointerEnter;
-    [HideInInspector] public UnityEvent<FloatWindow> onPointerExit;
-    private Dictionary<string, List<UIBehaviour>> controlDic = new Dictionary<string, List<UIBehaviour>>();
+    public bool ifShow {  get; set; }
+    public void Hide();
+}
+
+public abstract class FloatWindow<T> : UIBehaviour,IFloatWindow
+{
+    private static IFloatWindow single;
+    public bool ifShow { get; set; }
+
+    [HideInInspector] public RectTransform rt;
+    [HideInInspector] public BasePanel panel;
+    [HideInInspector] public Rect panelRect;
+    [HideInInspector] public T item;
+    [HideInInspector] public int type;
 
     protected override void Awake()
     {
-        base.Awake();
-        FindChildrenControl<Button>();
-        FindChildrenControl<Image>();
-        FindChildrenControl<Text>();
-        FindChildrenControl<Toggle>();
-        FindChildrenControl<Slider>();
-        FindChildrenControl<ScrollRect>();
-        FindChildrenControl<InputField>();
-        FindChildrenControl<Dropdown>();
-        FindChildrenControl<FloatWindow>();
-        FindChildrenControl<IntegerTriger>();
+        rt = transform as RectTransform;
     }
 
-    /// <summary>
-    /// 得到对应名字的对应控件脚本
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    /// <param name="controlName"></param>
-    /// <returns></returns>
-    public T GetControl<T>(string controlName) where T : UIBehaviour
+    public void Show(T obj, BasePanel panel, UnityAction<IFloatWindow> callback, int type = 0)
     {
-        if (controlDic.ContainsKey(controlName))
+        if (single != null && single.ifShow) single.Hide();
+        PoolMgr.Instance.GetObj("FloatWindow_" + this.name, this.gameObject, (o) =>
         {
-            for (int i = 0; i < controlDic[controlName].Count; ++i)
+            o.transform.SetParent(panel.gameObject.transform, false);
+            FloatWindow<T> fw = o.GetComponent<FloatWindow<T>>();
+            fw.rt.anchorMax = Vector2.zero;
+            fw.rt.anchorMin = Vector2.zero;
+            fw.rt.pivot = Vector2.right;
+            fw.ifShow = true;
+            fw.panel = panel;
+            fw.type = type;
+            fw.item = obj;
+            fw.panelRect = (panel.gameObject.transform as RectTransform).rect;
+            //LayoutRebuilder.ForceRebuildLayoutImmediate(rt);
+            fw.MoveAtMouse();
+            single = fw;
+            fw.OnShow();
+            callback?.Invoke(fw);
+        });
+    }
+
+    protected abstract void OnShow();
+
+    public void Hide() 
+    {
+        if (ifShow)
+        {
+            PoolMgr.Instance.PushObj("FloatWindow_" + this.name, this.gameObject);
+            ifShow = false;
+            OnHide();
+        }
+    }
+
+    protected abstract void OnHide();
+
+    private void Update()
+    {
+        if(type == 0)
+        {
+            MoveAtMouse();
+        }else if(type == 1)
+        {
+            if(Input.GetMouseButtonDown(0)|| Input.GetMouseButtonDown(1))
             {
-                if (controlDic[controlName][i] is T)
-                    return controlDic[controlName][i] as T;
+                Hide();
             }
         }
-
-        return null;
     }
 
-    /// <summary>
-    /// 找到子对象的对应控件
-    /// </summary>
-    /// <typeparam name="T"></typeparam>
-    private void FindChildrenControl<T>() where T : UIBehaviour
+    private void MoveAtMouse()
     {
-        T[] controls = window.GetComponentsInChildren<T>();
-        for (int i = 0; i < controls.Length; ++i)
-        {
-            string objName = controls[i].gameObject.name;
-            if (controlDic.ContainsKey(objName))
-                controlDic[objName].Add(controls[i]);
-            else
-                controlDic.Add(objName, new List<UIBehaviour>() { controls[i] });
-        }
-    }
-
-    
-
-    public void OnPointerEnter(PointerEventData eventData)
-    {
-        Debug.Log(eventData.position);
-        window.SetActive(true);
-        onPointerEnter?.Invoke(this);
-
-
-    }
-
-    public void OnPointerExit(PointerEventData eventData)
-    {
-        window.SetActive(false);
-        onPointerExit.Invoke(this);
+        Vector2 pos = Input.mousePosition;
+        if (pos.x < rt.rect.width) pos.x = rt.rect.width;
+        if (pos.y + rt.rect.height > panelRect.height) pos.y = panelRect.height - rt.rect.height;
+        rt.anchoredPosition = pos;
     }
 }

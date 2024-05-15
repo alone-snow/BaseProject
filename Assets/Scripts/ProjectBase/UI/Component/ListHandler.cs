@@ -8,7 +8,7 @@ using UnityEngine.UI;
 
 public delegate object GetObjectaction(out object obj);
 
-public class ListHandler : UIBehaviour
+public class ListHandler : UIBehaviour, IList
 {
     [Tooltip("放元素控件的 Transform")]
     public Transform content;
@@ -32,9 +32,22 @@ public class ListHandler : UIBehaviour
     public GetObjectaction getObjectaction;
 
     private int selectIndex = -1;
-    private List<CurrencyButton> currencyList = new List<CurrencyButton>();
-    private IList list;
+    public List<CurrencyButton> currencyList = new List<CurrencyButton>();
+    private IBoxList list;
     private Type objType;
+    public BasePanel basePanel;
+    public int Count => list.Count;
+
+    public bool IsFixedSize => false;
+
+    public bool IsReadOnly => false;
+
+    public bool IsSynchronized => false;
+
+    public object SyncRoot => null;
+
+    public object this[int index] { get => list[index]; set => Set(value, index); }
+
     // Start is called before the first frame update
     protected override void Awake()
     {
@@ -55,9 +68,9 @@ public class ListHandler : UIBehaviour
     /// public ListHandler lhPos
     /// List<Vector3> v3 = new List<Vector3>()
     /// 
-    /// lhPos.Init( v3,
+    /// lhPos.InitList( v3,
     ///             (c, i) => { 
-    ///                         c.Init( v3[i].ToString(), i, (index) => { Debug.Log(v3[index]; )}); 
+    ///                         c.InitList( v3[i].ToString(), i, (index) => { Debug.Log(v3[index]; )}); 
     ///                        },
     ///             (out object v3) => {
     ///                                 v3 = new Vector3(1,2,3); 
@@ -73,16 +86,114 @@ public class ListHandler : UIBehaviour
     /// <param name="creatButton"></param>
     /// <param name="getObjectaction"></param>
     /// <param name="currencyButton"></param>
-    public void Init<T>(List<T> list ,UnityAction<CurrencyButton,int> creatButton, GetObjectaction getObjectaction = null, CurrencyButton currencyButton = null) 
+    public BoxList<T> InitList<T>(IList<T> list ,UnityAction<CurrencyButton,int> creatButton, GetObjectaction getObjectaction = null, CurrencyButton currencyButton = null) 
     {
+        Unload();
         selectIndex = -1;
-        this.list = list;
+        BoxList<T> box = new BoxList<T>(list);
+        Load(box);
         objType = typeof(T);
         this.getObjectaction = getObjectaction;
         this.creatButton = creatButton;
         if (currencyButton != null) this.currencyButton = currencyButton;
-        currencyButton = this.currencyButton;
-        if(currencyList.Count > 0)
+        ReBuild();
+        return box;
+    }
+
+    public void InitBox<T>(BoxList<T> list, UnityAction<CurrencyButton, int> creatButton, GetObjectaction getObjectaction = null, CurrencyButton currencyButton = null)
+    {
+        Unload();
+        selectIndex = -1;
+        Load(list);
+        objType = typeof(T);
+        this.getObjectaction = getObjectaction;
+        this.creatButton = creatButton;
+        if (currencyButton != null) this.currencyButton = currencyButton;
+        ReBuild();
+    }
+
+    public T GetCurrencyButton<T>(int index) where T : CurrencyButton
+    {
+        return currencyList[index] as T;
+    }
+
+    protected override void OnDisable()
+    {
+        Unload();
+    }
+
+    private void Load(IBoxList list)
+    {
+        this.list = list;
+        list.AddAction(BoxItemChange);
+    }
+
+    private void Unload()
+    {
+        if (list != null)
+        {
+            list.RemoveAction(BoxItemChange);
+        }
+    }
+
+    private void BoxItemChange(IBoxList.Operation op,int index,object oldItem,object newItem)
+    {
+        switch (op)
+        {
+            case IBoxList.Operation.OP_ADD:
+                PoolMgr.Instance.GetObj("ListHander_" + currencyButton.name, currencyButton.gameObject, (o) =>
+                {
+                    CurrencyButton cb = o.GetComponent<CurrencyButton>();
+                    cb.basePanel = basePanel;
+                    cb.OnClikButton.AddListener(ChoiceButton);
+                    o.transform.SetParent(content, false);
+                    currencyList.Add(cb);
+                    creatButton?.Invoke(cb, index);
+                });
+                m_OnAddItem?.Invoke(newItem);
+                break;
+            case IBoxList.Operation.OP_REMOVEAT:
+                PoolMgr.Instance.PushObj(currencyList[index].gameObject.name, currencyList[index].gameObject);
+                currencyList.RemoveAt(index);
+                for (int i = index; i < currencyList.Count; i++)
+                {
+                    currencyList[i].index = i;
+                }
+                if (selectIndex >= list.Count) selectIndex = list.Count - 1;
+                m_OnRemoveItem?.Invoke(oldItem);
+                break;
+            case IBoxList.Operation.OP_CLEAR:
+                if (currencyList.Count != 0)
+                {
+                    foreach (var item in currencyList)
+                    {
+                        PoolMgr.Instance.PushObj(item.gameObject.name, item.gameObject);
+                    }
+                    currencyList.Clear();
+                }
+                break;
+            case IBoxList.Operation.OP_INSERT:
+                PoolMgr.Instance.GetObj("ListHander_" + currencyButton.name, currencyButton.gameObject, (o) =>
+                {
+                    CurrencyButton cb = o.GetComponent<CurrencyButton>();
+                    cb.basePanel = basePanel;
+                    cb.OnClikButton.AddListener(ChoiceButton);
+                    o.transform.SetParent(content, false);
+                    o.transform.SetSiblingIndex(index);
+                    currencyList.Add(cb);
+                    creatButton?.Invoke(cb, index);
+                });
+                m_OnAddItem?.Invoke(newItem);
+                break;
+            case IBoxList.Operation.OP_SET:
+                creatButton?.Invoke(currencyList[index], index);
+                break;
+        }
+    }
+
+    public void ReBuild()
+    {
+        if (currencyList.Count != 0)
         {
             foreach (var item in currencyList)
             {
@@ -90,15 +201,16 @@ public class ListHandler : UIBehaviour
             }
             currencyList.Clear();
         }
-        
-        for(int i = 0; i < list.Count; i++)
+
+        for (int i = 0; i < list.Count; i++)
         {
             PoolMgr.Instance.GetObj("ListHander_" + currencyButton.name, currencyButton.gameObject, (o) =>
             {
                 CurrencyButton cb = o.GetComponent<CurrencyButton>();
+                cb.basePanel = basePanel;
                 creatButton?.Invoke(cb, i);
-                cb.OnClikButton.AddListener(ChoiceButton);              
-                o.transform.SetParent(content,false);
+                cb.OnClikButton.AddListener(ChoiceButton);
+                o.transform.SetParent(content, false);
                 currencyList.Add(cb);
             });
         }
@@ -110,19 +222,21 @@ public class ListHandler : UIBehaviour
         m_OnClikButton?.Invoke(index);
     }
 
+    public void AddItem<T>(T obj)
+    {
+        list.Add(obj);
+    }
+
     public void AddItem()
     {
         object obj = getObjectaction == null ? Activator.CreateInstance(objType) : getObjectaction?.Invoke(out obj);
-        list.Add(obj);
-        PoolMgr.Instance.GetObj("ListHander_" + currencyButton.name, currencyButton.gameObject, (o) =>
-        {
-            CurrencyButton cb = o.GetComponent<CurrencyButton>();
-            creatButton?.Invoke(cb, list.Count - 1);
-            cb.OnClikButton.AddListener(ChoiceButton);
-            o.transform.SetParent(content, false);
-            currencyList.Add(cb);
-        });
-        m_OnAddItem?.Invoke(obj);
+        AddItem(obj);
+    }
+
+    public void RemoveItem<T>(T obj)
+    {
+        int index = list.IndexOf(obj);
+        list.RemoveAt(index);
     }
 
     public void RemoveItem()
@@ -132,21 +246,16 @@ public class ListHandler : UIBehaviour
         if(selectIndex == -1)
         {
             list.RemoveAt(list.Count - 1);
-            Destroy(currencyList[currencyList.Count - 1].gameObject);
-            currencyList.RemoveAt(currencyList.Count - 1);
         }
         else
         {
             list.RemoveAt(selectIndex);
-            Destroy(currencyList[selectIndex].gameObject);
-            currencyList.RemoveAt(selectIndex);
-            for(int i = selectIndex; i < currencyList.Count; i++)
-            {
-                currencyList[i].index = i;
-            }
         }
-        selectIndex = -1;
-        m_OnRemoveItem?.Invoke(obj);
+    }
+
+    public void Clear()
+    {
+        list.Clear();
     }
 
     public CurrencyButton GetCurrencyButton(int index)
@@ -154,4 +263,85 @@ public class ListHandler : UIBehaviour
         return currencyList[index];
     }
 
+    public void Set(object obj, int index)
+    {
+        if (index >= Count)
+        {
+            return;
+        }
+        list[index] = obj;
+    }
+
+    public int Add(object value)
+    {
+        list.Add(value);
+        return Count - 1;
+    }
+
+    public bool Contains(object value)
+    {
+        return IndexOf(value) >= 0;
+    }
+
+    public int IndexOf(object value)
+    {
+        for (int i = 0; i < list.Count; ++i)
+            if (value == list[i])
+                return i;
+        return -1;
+    }
+
+    public void Insert(int index, object value)
+    {
+        list.Insert(index, value);
+    }
+
+    public void Remove(object value)
+    {
+        int index = list.IndexOf(value);
+        RemoveAt(index);
+    }
+
+    public void RemoveAt(int index)
+    {
+        if (index == -1 || index > list.Count) return;
+        list.RemoveAt(index);
+    }
+
+    public void CopyTo(Array array, int index)
+    {
+        list.CopyTo(array, index);
+    }
+
+    public Enumerator GetEnumerator() => new Enumerator(this);
+
+    IEnumerator IEnumerable.GetEnumerator() => new Enumerator(this);
+
+    public struct Enumerator : IEnumerator
+    {
+        readonly ListHandler list;
+        int index;
+        public object Current { get; private set; }
+
+        public Enumerator(ListHandler list)
+        {
+            this.list = list;
+            index = -1;
+            Current = default;
+        }
+
+        public bool MoveNext()
+        {
+            if (++index >= list.Count)
+            {
+                return false;
+            }
+            Current = list[index];
+            return true;
+        }
+
+        public void Reset() => index = -1;
+        object IEnumerator.Current => Current;
+        public void Dispose() { }
+    }
 }

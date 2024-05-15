@@ -20,9 +20,11 @@ public class PanelList_SO : ScriptableObject
         }
         panelData.gameObject = basePanel;
         Debug.Log("×¢²á³É¹¦");
+#if UNITY_EDITOR
         EditorUtility.SetDirty(this);
         AssetDatabase.SaveAssets();
         EditorUtility.ClearDirty(this);
+#endif
     }
 }
 [Serializable]

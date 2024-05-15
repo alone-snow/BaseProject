@@ -1,25 +1,43 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Events;
+using static Unity.VisualScripting.Member;
 
 public class MusicMgr : BaseManager<MusicMgr>
 {
     //唯一的背景音乐组件
     private AudioSource bkMusic = null;
     //音乐大小
-    private float bkValue = 1;
+    public float bkValue = 1;
 
     //音效依附对象
     private GameObject soundObj = null;
     //音效列表
     private List<AudioSource> soundList = new List<AudioSource>();
+    private Dictionary<string, Stack<AudioSource>> soundDic = new Dictionary<string, Stack<AudioSource>>();
     //音效大小
-    private float soundValue = 1;
+    public float soundValue = 1;
+
+    public Action<float> onChangebkValue;
+    public Action<float> onChangesoundValue;
 
     public MusicMgr()
     {
         MonoMgr.Instance.AddUpdateListener(Update);
+        if (soundObj == null)
+        {
+            soundObj = new GameObject();
+            GameObject.DontDestroyOnLoad(soundObj);
+            soundObj.name = "Sound";
+        }
+    }
+
+    public void Init(float bkValue,float soundValue)
+    {
+        this.bkValue = bkValue;
+        this.soundValue = soundValue;
     }
 
     private void Update()
@@ -34,7 +52,7 @@ public class MusicMgr : BaseManager<MusicMgr>
             {
                 if (!soundList[i].isPlaying)
                 {
-                    GameObject.Destroy(soundList[i]);
+                    PushSound(soundList[i]);
                     soundList.RemoveAt(i);
                 }
             }
@@ -93,6 +111,7 @@ public class MusicMgr : BaseManager<MusicMgr>
     public void ChangeBKValue(float v)
     {
         bkValue = v;
+        onChangebkValue?.Invoke(bkValue);
         if (bkMusic == null)
             return;
         bkMusic.volume = bkValue;
@@ -103,16 +122,8 @@ public class MusicMgr : BaseManager<MusicMgr>
     /// </summary>
     public void PlaySound(string name, bool isLoop = false, UnityAction<AudioSource> callBack = null)
     {
-        if(soundObj == null)
-        {
-            soundObj = new GameObject();
-            GameObject.DontDestroyOnLoad(soundObj);
-            soundObj.name = "Sound";
-        }
         //当音效资源异步加载结束后 再添加一个音效
-        AudioClip clip = ResMgr.Instance.Load<AudioClip>("Music/Sound/" + name);
-        AudioSource source = soundObj.AddComponent<AudioSource>();
-        source.clip = clip;
+        AudioSource source = GetSound(name);
         source.loop = isLoop;
         source.volume = soundValue;
         source.Play();
@@ -128,6 +139,7 @@ public class MusicMgr : BaseManager<MusicMgr>
     public void ChangeSoundValue( float value )
     {
         soundValue = value;
+        onChangesoundValue(soundValue);
         for (int i = 0; i < soundList.Count; ++i)
             soundList[i].volume = value;
     }
@@ -140,8 +152,30 @@ public class MusicMgr : BaseManager<MusicMgr>
         if( soundList.Contains(source) )
         {
             soundList.Remove(source);
-            source.Stop();
-            GameObject.Destroy(source);
+            PushSound(source);
         }
+    }
+
+    private AudioSource GetSound(string name)
+    {
+        if(soundDic.TryGetValue(name, out var stack))
+        {
+            if(stack.Count!=0) return stack.Pop();
+        }
+        AudioClip clip = ResMgr.Instance.Load<AudioClip>("Music/Sound/" + name);
+        AudioSource source = soundObj.AddComponent<AudioSource>();
+        source.clip = clip;
+        return source;
+    }
+
+    private void PushSound(AudioSource audio)
+    {
+        audio.Stop();
+        if(!soundDic.TryGetValue(audio.name,out var stack))
+        {
+            stack = new Stack<AudioSource>();
+            soundDic[audio.name] = stack;
+        }
+        stack.Push(audio);
     }
 }

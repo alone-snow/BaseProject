@@ -4,8 +4,6 @@ using System.Collections.Generic;
 using System.Reflection;
 using UnityEngine;
 
-public class NotCloneAttribute : PropertyAttribute { }
-
 public static class Utilities
 {
     public static bool TryClearNullKey<Key,Value>(this Dictionary<Key,Value> dic,out Value value)
@@ -168,6 +166,6 @@ public static class Utilities
 
     public static bool ExDistance(int x, int y, int distance)
     {
-        return x * x + y * y < distance;
+        return x * x + y * y > distance * distance;
     }
 }

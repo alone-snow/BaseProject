@@ -1,4 +1,5 @@
 using BinaryReadWrite;
+using ExcelTool;
 using Steamworks;
 using System;
 using System.Collections;
@@ -15,9 +16,22 @@ public class Main : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        //NetMgr.Instance.Init();
+        //使用自建Writer和Reader
+        WriterManage.Init();
+        PlayerData player = new PlayerData() { id = 0 };
+        //序列化
+        Writer writer = new Writer();
+        writer.Write(player);
+        byte[] bytes = writer.ToArray();
+        //反序列化
+        Reader reader = new Reader(bytes);
+        player = reader.ReadPlayerData();
 
-        UIManager.Instance.ShowPanel<LoginPanel>();
+        WriterManage.Init();
+        List<ItemData> items = ItemData.Instance;
+
+        //NetMgr.Instance.Init();
+        //UIManager.Instance.ShowPanel<LoginPanel>();
 
         //UIManager.Instance.PreparePanel<TripleEliminationPanel>();
         //TEManager.Instance.Init(5, 6, 10, (o) =>

@@ -10,6 +10,7 @@ public class CurrencyButton : MonoBehaviour
     public int index;
     protected UnityEvent<int> m_OnClikButton = new UnityEvent<int>();
 
+    public BasePanel basePanel;
     public UnityEvent<int> OnClikButton => m_OnClikButton;
 
     public UnityAction<int> OnClik;
@@ -19,6 +20,7 @@ public class CurrencyButton : MonoBehaviour
         {
             m_OnClikButton?.Invoke(index);
             OnClik?.Invoke(index);
+            Click();
         });
     }
     /// <summary>
@@ -35,6 +37,10 @@ public class CurrencyButton : MonoBehaviour
         this.index = index;
         txt.text = name;
         OnClik = callback;
-        
+    }
+
+    protected virtual void Click()
+    {
+
     }
 }

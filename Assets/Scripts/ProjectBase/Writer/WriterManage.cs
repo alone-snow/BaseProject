@@ -1,10 +1,10 @@
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEngine;
 using BinaryReadWrite;
+using System.Collections.Generic;
 
 public class WriterManage
 {
@@ -12,9 +12,23 @@ public class WriterManage
     public static WriterManage Instance => instance;
 
     Queue<Writer> writers = new Queue<Writer>();
-    public WriterManage()
+    bool init;
+
+    public static List<(string savePath, Assembly assembly)> assemblyList = new List<(string savePath, Assembly assembly)>()
     {
-        InitReaderWriter();
+        (Application.dataPath + "/Scripts/ProjectBase/Writer/ReadWrite/",typeof(Writer).Assembly)
+    };
+
+    public static void Init()
+    {
+        if(!instance.init)
+        {
+            instance.init = true;
+            foreach(var value in assemblyList)
+            {
+                instance.InitReaderWriter(value.assembly);
+            }
+        }
     }
 
     public byte[] Write<T>(T data)
@@ -35,7 +49,7 @@ public class WriterManage
         return reader.Read<T>();
     }
 
-    private void InitReaderWriter()
+    public void InitReaderWriter(Assembly assembly)
     {
         Type writerType = typeof(Writer);
         Type writerGenericType = typeof(Writer<>);
@@ -43,7 +57,6 @@ public class WriterManage
         Type readerType = typeof(Reader);
         Type readerGenericType = typeof(Reader<>);
         Type funcGenericType = typeof(Func<,>);
-        Assembly assembly = writerType.Assembly;
         var assemblyTypes = assembly.GetTypes().ToList();
         foreach (var type in assemblyTypes)
         {

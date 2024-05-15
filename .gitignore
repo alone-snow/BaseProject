@@ -4,3 +4,4 @@ Logs
 .vsconfig
 *.csproj
 BaseProject.sln
+obj

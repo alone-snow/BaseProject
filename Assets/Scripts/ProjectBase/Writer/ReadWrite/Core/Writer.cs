@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
 using UnityEngine;
@@ -52,7 +53,6 @@ namespace BinaryReadWrite
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static implicit operator ArraySegment<byte>(Writer w) =>
             w.ToArraySegment();
-
         internal unsafe void WriteBlittable<T>(T value) where T : unmanaged
         {
             int size = sizeof(T);

@@ -49,6 +49,7 @@ public class PanelUIEditor : UnityEditor.Editor
         typeof(Image),
         typeof(RawImage),
         typeof(ListHandler),
+        typeof(Animator)
     };
 
     public static List<Type> UIComponentTypeSort = new List<Type>()
@@ -60,6 +61,7 @@ public class PanelUIEditor : UnityEditor.Editor
         typeof(InputField),
         typeof(Button),
         typeof(ListHandler),
+        typeof(Animator)
     };
 
     private void OnEnable()
@@ -427,6 +429,10 @@ public class PanelUIEditor : UnityEditor.Editor
             {
                 bindStr.Add($"\t\tstring  {gameObjectName}InputFieldName = \"{gameObjectName}\";");
                 bindStr.Add("\t\t" + gameObjectName + ".onValueChanged.AddListener((o)=>{ OnInputFieldValueChanged(" + gameObjectName + "InputFieldName, o); });");
+            }
+            else if (refName == typeof(ListHandler).FullName)
+            {
+                bindStr.Add("\t\t" + gameObjectName + ".basePanel = this;");
             }
         }
 
